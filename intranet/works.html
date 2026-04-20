@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NexusCorp — Trabalhos Realizados</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="shared.css" />
+  <style>
+    /* Hero banner */
+    .works-hero {
+      background: linear-gradient(135deg, var(--navy-mid), var(--navy-lt));
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 44px 48px;
+      margin-bottom: 32px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .works-hero::before {
+      content: '';
+      position: absolute;
+      right: -60px; top: -60px;
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%);
+    }
+
+    .works-hero::after {
+      content: '\f559';
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+      position: absolute;
+      right: 48px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 120px;
+      color: rgba(201,168,76,0.05);
+    }
+
+    .hero-text h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 30px;
+      color: var(--white);
+      margin-bottom: 10px;
+    }
+
+    .hero-text p {
+      font-size: 15px;
+      color: var(--muted);
+      max-width: 480px;
+      line-height: 1.65;
+    }
+
+    .hero-nums {
+      display: flex;
+      gap: 36px;
+      flex-shrink: 0;
+      z-index: 1;
+    }
+
+    .hero-num { text-align: center; }
+
+    .hero-num-val {
+      font-family: 'Playfair Display', serif;
+      font-size: 38px;
+      color: var(--gold);
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .hero-num-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* Toolbar */
+    .works-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+
+    .category-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .cat-tab {
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-family: 'Inter', sans-serif;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .cat-tab:hover { color: var(--white); border-color: rgba(138,155,184,0.35); }
+    .cat-tab.active { background: rgba(201,168,76,0.12); border-color: var(--gold); color: var(--gold); }
+
+    /* Works grid */
+    .works-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 22px;
+    }
+
+    .work-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      overflow: hidden;
+      transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+      animation: cardIn 0.5s cubic-bezier(0.22,1,0.36,1) both;
+    }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .work-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+      border-color: var(--gold);
+    }
+
+    .work-thumb {
+      height: 180px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .work-thumb-icon {
+      font-size: 64px;
+      opacity: 0.15;
+    }
+
+    .work-thumb-label {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+    }
+
+    .work-award {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 34px;
+      height: 34px;
+      background: rgba(201,168,76,0.15);
+      border: 1px solid var(--gold);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gold);
+      font-size: 14px;
+    }
+
+    .work-body { padding: 22px 24px; }
+
+    .work-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 17px;
+      color: var(--white);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .work-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.65;
+      margin-bottom: 18px;
+    }
+
+    .work-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .work-authors {
+      display: flex;
+      align-items: center;
+    }
+
+    .author-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      margin-left: -8px;
+      color: var(--navy);
+    }
+
+    .author-avatar:first-child { margin-left: 0; }
+
+    .work-date {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .work-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .work-stats {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .work-stats i { margin-right: 4px; color: var(--gold); }
+
+    .work-link {
+      font-size: 13px;
+      color: var(--gold);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      transition: gap 0.2s;
+    }
+
+    .work-link:hover { gap: 10px; }
+
+    /* Featured card */
+    .work-card.featured { border-color: var(--gold); }
+    .work-card.featured .work-thumb { height: 220px; }
+
+    @media (max-width: 900px) {
+      .works-hero { flex-direction: column; gap: 28px; }
+      .hero-nums { gap: 24px; }
+    }
+  </style>
+</head>
+<body>
+<div id="app-shell">
+  <main class="main-content">
+
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Trabalhos Realizados</h1>
+        <p class="page-sub">Cases de sucesso, projetos entregues e publicações corporativas</p>
+      </div>
+      <div style="display:flex;gap:12px">
+        <button class="btn-outline"><i class="fa-solid fa-filter"></i> Filtros avançados</button>
+        <button class="btn-gold"><i class="fa-solid fa-plus"></i> Publicar trabalho</button>
+      </div>
+    </div>
+
+    <!-- Hero -->
+    <div class="works-hero">
+      <div class="hero-text">
+        <h2>Excelência que impulsiona resultados</h2>
+        <p>Conheça os projetos que definiram nossa trajetória — entregas que geraram impacto real, transformaram operações e reforçaram nossa posição de liderança no mercado.</p>
+      </div>
+      <div class="hero-nums">
+        <div class="hero-num"><div class="hero-num-val">347</div><div class="hero-num-label">Projetos entregues</div></div>
+        <div class="hero-num"><div class="hero-num-val">42</div><div class="hero-num-label">Premiações</div></div>
+        <div class="hero-num"><div class="hero-num-val">98%</div><div class="hero-num-label">Satisfação cliente</div></div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="works-toolbar">
+      <div class="category-tabs">
+        <button class="cat-tab active" onclick="filterWorks(this,'todos')"><i class="fa-solid fa-grip"></i> Todos</button>
+        <button class="cat-tab" onclick="filterWorks(this,'tecnologia')"><i class="fa-solid fa-microchip"></i> Tecnologia</button>
+        <button class="cat-tab" onclick="filterWorks(this,'estrategia')"><i class="fa-solid fa-chess-king"></i> Estratégia</button>
+        <button class="cat-tab" onclick="filterWorks(this,'sustentabilidade')"><i class="fa-solid fa-leaf"></i> Sustentabilidade</button>
+        <button class="cat-tab" onclick="filterWorks(this,'expansao')"><i class="fa-solid fa-map-location-dot"></i> Expansão</button>
+      </div>
+      <div style="margin-left:auto;font-size:13px;color:var(--muted)">
+        <i class="fa-solid fa-sort"></i> Ordenar: <a href="#" style="color:var(--gold)">Mais recentes</a>
+      </div>
+    </div>
+
+    <!-- Grid -->
+    <div class="works-grid" id="works-grid">
+
+      <!-- Featured -->
+      <div class="work-card featured" data-cat="tecnologia" style="animation-delay:0.05s">
+        <div class="work-thumb" style="background:linear-gradient(135deg,#0d1f3c,#1a3a6e)">
+          <i class="work-thumb-icon fa-solid fa-microchip" style="color:var(--gold)"></i>
+          <div class="work-thumb-label"><span class="tag tag-gold"><i class="fa-solid fa-star"></i> Destaque</span></div>
+          <div class="work-award"><i class="fa-solid fa-trophy"></i></div>
+        </div>
+        <div class="work-body">
+          <div class="work-title">Plataforma de IA para Otimização Logística Nacional</div>
+          <div class="work-desc">Desenvolvemos e implantamos um sistema de inteligência artificial que reduziu os custos logísticos da operação em 34% e aumentou a eficiência de rotas em 61% — impactando 280 mil entregas/mês.</div>
+          <div class="work-meta">
+            <div class="work-authors">
+              <div class="author-avatar" style="background:linear-gradient(135deg,#5a9fff,#3a6fcc)">CA</div>
+              <div class="author-avatar" style="background:linear-gradient(135deg,#3ec882,#1a9a5e)">MF</div>
+              <div class="author-avatar" style="background:linear-gradient(135deg,var(--gold),var(--gold-dk))">RL</div>
+              <div class="author-avatar" style="background:var(--surface-2);color:var(--muted);font-size:9px">+4</div>
+            </div>
+            <div class="work-date"><i class="fa-regular fa-calendar"></i> Mar 2026</div>
+          </div>
+        </div>
+        <div class="work-footer">
+          <div class="work-stats">
+            <span><i class="fa-regular fa-eye"></i>2.4k views</span>
+            <span><i class="fa-solid fa-heart"></i>184</span>
+            <span><i class="fa-solid fa-download"></i>312</span>
+          </div>
+          <a href="#" class="work-link">Ver case <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+      </div>
+
+      <div class="work-card" data-cat="estrategia" style="animation-delay:0.1s">
+        <div class="work-thumb" style="background:linear-gradient(135deg,#1a2840,#0f3028)">
+          <i class="work-thumb-icon fa-solid fa-chess-king" style="color:#3ec882"></i>
+          <div class="work-thumb-label"><span class="tag tag-green">Estratégia</span></div>
+        </div>
+        <div class="work-body">
+          <div class="work-title">Reestruturação Estratégica — Divisão de Varejo</div>
+          <div class="work-desc">Redesenho completo do modelo de negócio da divisão de varejo, resultando em crescimento de 22% na margem líquida e reposicionamento de marca em 5 regiões do país.</div>
+          <div class="work-meta">
+            <div class="work-authors">
+              <div class="author-avatar" style="background:linear-gradient(135deg,#b06cee,#7a3bb0)">PS</div>
+              <div class="author-avatar" style="background:linear-gradient(135deg,var(--gold),var(--gold-dk))">RL</div>
+            </div>
+            <div class="work-date"><i class="fa-regular fa-calendar"></i> Fev 2026</div>
+          </div>
+        </div>
+        <div class="work-footer">
+          <div class="work-stats">
+            <span><i class="fa-regular fa-eye"></i>1.1k</span>
+            <span><i class="fa-solid fa-heart"></i>97</span>
+            <span><i class="fa-solid fa-download"></i>145</span>
+          </div>
+          <a href="#" class="work-link">Ver case <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+      </div>
+
+      <div class="work-card" data-cat="sustentabilidade" style="animation-delay:0.15s">
+        <div class="work-thumb" style="background:linear-gradient(135deg,#0d2416,#1a3a20)">
+          <i class="work-thumb-icon fa-solid fa-leaf" style="color:#3ec882"></i>
+          <div class="work-thumb-label"><span class="tag tag-green"><i class="fa-solid fa-leaf"></i> Sustentabilidade</span></div>
+          <div class="work-award"><i class="fa-solid fa-trophy"></i></div>
+        </div>
+        <div class="work-body">
+          <div class="work-title">Programa Carbon Zero — Operações Industriais</div>
+          <div class="work-desc">Iniciativa de neutralização de carbono nas 12 plantas industriais do grupo. Redução de 47% nas emissões em 18 meses, certificação ISO 14001 e reconhecimento ESG nacional.</div>
+          <div class="work-meta">
+            <div class="work-authors">
+              <div class="author-avatar" style="background:linear-gradient(135deg,#3ec882,#1a9a5e)">MF</div>
+              <div class="author-avatar" style="background:linear-gradient(135deg,#5ae0d8,#1a9994)">TC</div>
+            </div>
+            <div class="work-date"><i class="fa-regular fa-calendar"></i> Jan 2026</div>
+          </div>
+        </div>
+        <div class="work-footer">
+          <div class="work-stats">
+            <span><i class="fa-regular fa-eye"></i>876</span>
+            <span><i class="fa-solid fa-heart"></i>203</span>
+            <span><i class="fa-solid fa-download"></i>88</span>
+          </div>
+          <a href="#" class="work-link">Ver case <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+      </div>
+
+      <div class="work-card" data-cat="expansao" style="animation-delay:0.2s">
+        <div class="work-thumb" style="background:linear-gradient(135deg,#1a1040,#2a1060)">
+          <i class="work-thumb-icon fa-solid fa-map-location-dot" style="color:#b06cee"></i>
+          <div class="work-thumb-label"><span class="tag tag-purple">Expansão</span></div>
+        </div>
+        <div class="work-body">
+          <div class="work-title">Abertura de 24 Unidades — Região Norte e Nordeste</div>
+          <div class="work-desc">Planejamento e execução da maior expansão geográfica da história da empresa. 24 novas unidades em 18 meses, geração de 1.200 empregos diretos e crescimento de 18% no faturamento regional.</div>
+          <div class="work-meta">
+            <div class="work-authors">
+              <div class="author-avatar" style="background:linear-gradient(135deg,var(--gold),var(--gold-dk))">RL</div>
+              <div class="author-avatar" style="background:linear-gradient(135deg,#ff7a5a,#cc4422)">JB</div>
+              <div class="author-avatar" style="background:linear-gradient(135deg,#5a9fff,#3a6fcc)">CA</div>
+            </div>
+            <div class="work-date"><i class="fa-regular fa-calendar"></i> Dez 2025</div>
+          </div>
+        </div>
+        <div class="work-footer">
+          <div class="work-stats">
+            <span><i class="fa-regular fa-eye"></i>1.8k</span>
+            <span><i class="fa-solid fa-heart"></i>142</span>
+            <span><i class="fa-solid fa-download"></i>217</span>
+          </div>
+          <a href="#" class="work-link">Ver case <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+      </div>
+
+      <div class="work-card" data-cat="tecnologia" style="animation-delay:0.25s">
+        <div class="work-thumb" style="background:linear-gradient(135deg,#1a1020,#0d1a38)">
+          <i class="work-thumb-icon fa-solid fa-shield-halved" style="color:#5a9fff"></i>
+          <div class="work-thumb-label"><span class="tag tag-blue">Tecnologia</span></div>
+        </div>
+        <div class="work-body">
+          <div class="work-title">Programa de Cibersegurança Corporativa 360°</div>
+          <div class="work-desc">Implementação de SOC interno, zero-trust architecture e programa de treinamento para 3.400 colaboradores. Redução de 96% em incidentes de segurança em 12 meses.</div>
+          <div class="work-meta">
+            <div class="work-authors">
+              <div class="author-avatar" style="background:linear-gradient(135deg,#5ae0d8,#1a9994)">TC</div>
+            </div>
+            <div class="work-date"><i class="fa-regular fa-calendar"></i> Nov 2025</div>
+          </div>
+        </div>
+        <div class="work-footer">
+          <div class="work-stats">
+            <span><i class="fa-regular fa-eye"></i>654</span>
+            <span><i class="fa-solid fa-heart"></i>78</span>
+            <span><i class="fa-solid fa-download"></i>190</span>
+          </div>
+          <a href="#" class="work-link">Ver case <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+      </div>
+
+      <div class="work-card" data-cat="estrategia" style="animation-delay:0.3s">
+        <div class="work-thumb" style="background:linear-gradient(135deg,#20100a,#3a1a08)">
+          <i class="work-thumb-icon fa-solid fa-handshake" style="color:#ff7a5a"></i>
+          <div class="work-thumb-label"><span class="tag tag-red">M&amp;A</span></div>
+          <div class="work-award"><i class="fa-solid fa-trophy"></i></div>
+        </div>
+        <div class="work-body">
+          <div class="work-title">Aquisição e Integração da TechSul S.A.</div>
+          <div class="work-desc">Processo de due diligence, negociação e integração cultural e operacional de empresa de tecnologia com 450 funcionários. ROI de 3.2x em 24 meses após a aquisição.</div>
+          <div class="work-meta">
+            <div class="work-authors">
+              <div class="author-avatar" style="background:linear-gradient(135deg,#5a9fff,#3a6fcc)">CA</div>
+              <div class="author-avatar" style="background:linear-gradient(135deg,#b06cee,#7a3bb0)">PS</div>
+            </div>
+            <div class="work-date"><i class="fa-regular fa-calendar"></i> Out 2025</div>
+          </div>
+        </div>
+        <div class="work-footer">
+          <div class="work-stats">
+            <span><i class="fa-regular fa-eye"></i>2.1k</span>
+            <span><i class="fa-solid fa-heart"></i>234</span>
+            <span><i class="fa-solid fa-download"></i>401</span>
+          </div>
+          <a href="#" class="work-link">Ver case <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="shared.js"></script>
+<script>
+function filterWorks(btn, cat) {
+  document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.work-card').forEach((card, i) => {
+    const show = cat === 'todos' || card.dataset.cat === cat;
+    card.style.display = show ? '' : 'none';
+    if (show) {
+      card.style.animationDelay = (i * 0.05) + 's';
+      card.style.animation = 'none';
+      card.offsetHeight; /* reflow */
+      card.style.animation = '';
+    }
+  });
+}
+</script>
+</body>
+</html>
