@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NexusCorp — Intranet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:     #060d1a;
+      --navy-mid: #0d1f3c;
+      --navy-lt:  #132848;
+      --gold:     #c9a84c;
+      --gold-lt:  #e8c96a;
+      --gold-dk:  #a07830;
+      --white:    #f0f4ff;
+      --muted:    #8a9bb8;
+      --glass-bg: rgba(13,31,60,0.72);
+      --glass-border: rgba(201,168,76,0.25);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', sans-serif;
+      background: var(--navy);
+      overflow: hidden;
+    }
+
+    /* ── Canvas background ── */
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+
+    /* ── Radial glow ── */
+    .glow {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(90px);
+      opacity: 0.18;
+      z-index: 0;
+      animation: pulse 8s ease-in-out infinite alternate;
+    }
+    .glow-1 { width: 600px; height: 600px; background: #1a4a8a; top: -150px; left: -150px; }
+    .glow-2 { width: 500px; height: 500px; background: var(--gold-dk); bottom: -100px; right: -100px; animation-delay: 3s; }
+    .glow-3 { width: 350px; height: 350px; background: #0e3a6e; top: 40%; left: 50%; animation-delay: 1.5s; }
+
+    @keyframes pulse {
+      from { transform: scale(1); opacity: 0.15; }
+      to   { transform: scale(1.2); opacity: 0.25; }
+    }
+
+    /* ── Wrapper ── */
+    .page {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      height: 100vh;
+    }
+
+    /* ── Left branding panel ── */
+    .brand-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 80px 70px;
+      position: relative;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 56px;
+    }
+
+    .logo-icon {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-dk));
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      color: var(--navy);
+      font-weight: 700;
+      box-shadow: 0 0 30px rgba(201,168,76,0.3);
+    }
+
+    .logo-text {
+      font-family: 'Playfair Display', serif;
+      font-size: 26px;
+      color: var(--white);
+      letter-spacing: 0.04em;
+    }
+
+    .logo-text span { color: var(--gold); }
+
+    .brand-headline {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(36px, 4vw, 58px);
+      font-weight: 700;
+      color: var(--white);
+      line-height: 1.15;
+      margin-bottom: 28px;
+    }
+
+    .brand-headline em {
+      font-style: normal;
+      background: linear-gradient(90deg, var(--gold), var(--gold-lt));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-sub {
+      font-size: 16px;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 420px;
+      margin-bottom: 52px;
+    }
+
+    /* Animated stat cards */
+    .stats-row {
+      display: flex;
+      gap: 20px;
+    }
+
+    .stat-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      padding: 20px 24px;
+      backdrop-filter: blur(20px);
+      animation: float 6s ease-in-out infinite;
+    }
+    .stat-card:nth-child(2) { animation-delay: 2s; }
+    .stat-card:nth-child(3) { animation-delay: 4s; }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-8px); }
+    }
+
+    .stat-num {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      color: var(--gold);
+      font-weight: 700;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* Vertical divider */
+    .divider {
+      width: 1px;
+      background: linear-gradient(to bottom, transparent, var(--glass-border), transparent);
+      margin: 40px 0;
+    }
+
+    /* ── Login card ── */
+    .login-panel {
+      width: 480px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+
+    .login-card {
+      width: 100%;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      padding: 52px 44px;
+      backdrop-filter: blur(28px);
+      box-shadow: 0 32px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+      animation: slideUp 0.8s cubic-bezier(0.22,1,0.36,1) both;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(40px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+
+    .card-sub {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 40px;
+    }
+
+    .field {
+      margin-bottom: 22px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    .input-wrap i {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 14px;
+      transition: color 0.2s;
+    }
+
+    .input-wrap input {
+      width: 100%;
+      background: rgba(6,13,26,0.6);
+      border: 1px solid rgba(138,155,184,0.2);
+      border-radius: 12px;
+      padding: 14px 16px 14px 44px;
+      color: var(--white);
+      font-size: 15px;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+
+    .input-wrap input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(201,168,76,0.12);
+    }
+
+    .input-wrap input:focus + i,
+    .input-wrap input:focus ~ i { color: var(--gold); }
+
+    .input-wrap .icon-right {
+      left: auto;
+      right: 16px;
+      cursor: pointer;
+    }
+
+    .forgot {
+      text-align: right;
+      margin-top: 8px;
+    }
+
+    .forgot a {
+      font-size: 13px;
+      color: var(--gold);
+      text-decoration: none;
+      opacity: 0.8;
+      transition: opacity 0.2s;
+    }
+    .forgot a:hover { opacity: 1; }
+
+    .remember {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 32px;
+    }
+
+    .remember input[type=checkbox] { accent-color: var(--gold); width: 16px; height: 16px; cursor: pointer; }
+    .remember label { font-size: 13px; color: var(--muted); cursor: pointer; }
+
+    .btn-login {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-dk));
+      border: none;
+      border-radius: 12px;
+      color: var(--navy);
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 8px 24px rgba(201,168,76,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-login:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+      box-shadow: 0 12px 32px rgba(201,168,76,0.4);
+    }
+
+    .btn-login:active { transform: translateY(0); }
+
+    .divider-text {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 28px 0;
+    }
+    .divider-text hr { flex: 1; border: none; border-top: 1px solid rgba(138,155,184,0.15); }
+    .divider-text span { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+    .sso-btn {
+      width: 100%;
+      padding: 13px;
+      background: transparent;
+      border: 1px solid rgba(138,155,184,0.2);
+      border-radius: 12px;
+      color: var(--white);
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .sso-btn:hover {
+      border-color: var(--gold);
+      background: rgba(201,168,76,0.06);
+    }
+
+    .sso-btn img { width: 20px; height: 20px; }
+
+    .card-footer {
+      margin-top: 36px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(138,155,184,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-footer span { font-size: 12px; color: var(--muted); }
+    .card-footer a { font-size: 12px; color: var(--gold); text-decoration: none; }
+
+    /* Loading spinner */
+    .spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(6,13,26,0.3);
+      border-top-color: var(--navy);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Notification */
+    .toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--navy-lt);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 14px 24px;
+      color: var(--white);
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 999;
+      transition: transform 0.4s cubic-bezier(0.22,1,0.36,1);
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.error { border-color: rgba(220,50,50,0.4); }
+    .toast.error i { color: #e05555; }
+    .toast.success i { color: var(--gold); }
+
+    @media (max-width: 900px) {
+      .brand-panel { display: none; }
+      .login-panel { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
+<div class="glow glow-3"></div>
+
+<div class="page">
+
+  <!-- Brand Panel -->
+  <div class="brand-panel">
+    <div class="brand-logo">
+      <div class="logo-icon"><i class="fa-solid fa-hexagon-nodes"></i></div>
+      <span class="logo-text">Nexus<span>Corp</span></span>
+    </div>
+
+    <h1 class="brand-headline">
+      Inteligência<br/>
+      corporativa em<br/>
+      <em>um só lugar.</em>
+    </h1>
+
+    <p class="brand-sub">
+      Acesso unificado a documentos, projetos, equipes e indicadores estratégicos — projetado para líderes que movem resultados.
+    </p>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-num">3.4k</div>
+        <div class="stat-label">Colaboradores</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">128</div>
+        <div class="stat-label">Projetos ativos</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">99.9%</div>
+        <div class="stat-label">Uptime</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Login Panel -->
+  <div class="login-panel">
+    <div class="login-card">
+      <h2 class="card-title">Bem-vindo de volta</h2>
+      <p class="card-sub">Acesse sua conta corporativa</p>
+
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <div class="field">
+          <label>E-mail corporativo</label>
+          <div class="input-wrap">
+            <i class="fa-solid fa-envelope"></i>
+            <input type="email" id="email" placeholder="voce@nexuscorp.com.br" autocomplete="email" required />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Senha</label>
+          <div class="input-wrap">
+            <i class="fa-solid fa-lock"></i>
+            <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required />
+            <i class="fa-solid fa-eye icon-right" id="toggle-pw" onclick="togglePassword()"></i>
+          </div>
+          <div class="forgot"><a href="#">Esqueceu a senha?</a></div>
+        </div>
+
+        <div class="remember">
+          <input type="checkbox" id="remember" />
+          <label for="remember">Manter sessão ativa por 30 dias</label>
+        </div>
+
+        <button type="submit" class="btn-login" id="btn-login">
+          <span id="btn-text">Entrar na Intranet</span>
+          <i class="fa-solid fa-arrow-right" id="btn-icon"></i>
+          <div class="spinner" id="btn-spinner"></div>
+        </button>
+      </form>
+
+      <div class="divider-text">
+        <hr/><span>ou acesse com</span><hr/>
+      </div>
+
+      <button class="sso-btn" onclick="handleSSO()">
+        <i class="fa-solid fa-shield-halved" style="color:var(--gold)"></i>
+        Entrar com SSO Corporativo (Microsoft)
+      </button>
+
+      <div class="card-footer">
+        <span>© 2026 NexusCorp</span>
+        <a href="#">Suporte TI &rarr;</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast">
+  <i class="fa-solid fa-circle-exclamation"></i>
+  <span id="toast-msg">Credenciais inválidas</span>
+</div>
+
+<script>
+/* ── Particle canvas ── */
+const canvas = document.getElementById('bg-canvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+
+function resize() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
+function initParticles() {
+  particles = Array.from({ length: 90 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    r: Math.random() * 1.8 + 0.3,
+    vx: (Math.random() - 0.5) * 0.3,
+    vy: (Math.random() - 0.5) * 0.3,
+    alpha: Math.random() * 0.5 + 0.1,
+  }));
+}
+
+function drawParticles() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  particles.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(201,168,76,${p.alpha})`;
+    ctx.fill();
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0) p.x = canvas.width;
+    if (p.x > canvas.width) p.x = 0;
+    if (p.y < 0) p.y = canvas.height;
+    if (p.y > canvas.height) p.y = 0;
+  });
+
+  /* Connection lines */
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 130) {
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = `rgba(201,168,76,${0.08 * (1 - dist/130)})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  }
+  requestAnimationFrame(drawParticles);
+}
+
+resize(); initParticles(); drawParticles();
+window.addEventListener('resize', () => { resize(); initParticles(); });
+
+/* ── Toggle password ── */
+function togglePassword() {
+  const inp = document.getElementById('password');
+  const ico = document.getElementById('toggle-pw');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    ico.classList.replace('fa-eye', 'fa-eye-slash');
+  } else {
+    inp.type = 'password';
+    ico.classList.replace('fa-eye-slash', 'fa-eye');
+  }
+}
+
+/* ── Toast ── */
+function showToast(msg, type = 'error') {
+  const t = document.getElementById('toast');
+  const icon = t.querySelector('i');
+  document.getElementById('toast-msg').textContent = msg;
+  t.className = `toast ${type}`;
+  icon.className = type === 'error'
+    ? 'fa-solid fa-circle-exclamation'
+    : 'fa-solid fa-circle-check';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+/* ── Login ── */
+function handleLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('email').value;
+  const pass  = document.getElementById('password').value;
+
+  setLoading(true);
+  setTimeout(() => {
+    setLoading(false);
+    if (email && pass.length >= 4) {
+      showToast('Autenticado com sucesso!', 'success');
+      setTimeout(() => { window.location.href = 'dashboard.html'; }, 900);
+    } else {
+      showToast('Credenciais inválidas. Tente novamente.', 'error');
+      document.getElementById('password').value = '';
+    }
+  }, 1600);
+}
+
+function handleSSO() {
+  setLoading(true);
+  setTimeout(() => {
+    setLoading(false);
+    showToast('Redirecionando para autenticação corporativa…', 'success');
+    setTimeout(() => { window.location.href = 'dashboard.html'; }, 1200);
+  }, 1200);
+}
+
+function setLoading(on) {
+  document.getElementById('btn-text').style.display = on ? 'none' : 'inline';
+  document.getElementById('btn-icon').style.display = on ? 'none' : 'inline';
+  document.getElementById('btn-spinner').style.display = on ? 'block' : 'none';
+  document.getElementById('btn-login').disabled = on;
+}
+</script>
+</body>
+</html>
