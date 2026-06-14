@@ -25,12 +25,12 @@
       opacity: 0.55;
     }
 
-    /* p5.js canvas gets z-index: 10 via JS */
+    /* p5 canvas sits above video via JS */
 
     #hud {
       position: fixed;
       top: 0; left: 0; right: 0;
-      z-index: 20;
+      z-index: 30;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -42,22 +42,20 @@
       font-size: 13px;
       letter-spacing: 4px;
       text-transform: uppercase;
-      color: rgba(0, 255, 255, 0.6);
+      color: rgba(0,255,255,0.7);
       text-shadow: 0 0 12px #00ffff;
     }
 
     #status {
       font-size: 12px;
       letter-spacing: 2px;
-      color: rgba(255, 255, 255, 0.5);
+      color: rgba(255,255,255,0.5);
       text-shadow: 0 0 8px rgba(255,255,255,0.3);
       transition: color 0.4s;
     }
 
-    #status.active {
-      color: rgba(0, 255, 200, 0.85);
-      text-shadow: 0 0 10px rgba(0,255,200,0.6);
-    }
+    #status.active  { color: rgba(0,255,200,0.9); text-shadow: 0 0 10px rgba(0,255,200,0.6); }
+    #status.error   { color: rgba(255,80,80,0.95); text-shadow: 0 0 10px rgba(255,80,80,0.7); }
 
     #hint {
       position: fixed;
@@ -67,10 +65,55 @@
       font-size: 11px;
       letter-spacing: 3px;
       text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.2);
-      z-index: 20;
+      color: rgba(255,255,255,0.2);
+      z-index: 30;
       pointer-events: none;
+      white-space: nowrap;
     }
+
+    /* Loading / error overlay */
+    #overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 24px;
+      background: rgba(0,5,18,0.92);
+      transition: opacity 0.6s;
+    }
+    #overlay.hidden { opacity: 0; pointer-events: none; }
+
+    #overlay-msg {
+      color: rgba(0,255,255,0.85);
+      font-size: 15px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      text-shadow: 0 0 18px #00ffff;
+      text-align: center;
+      max-width: 480px;
+      line-height: 1.7;
+    }
+
+    #overlay-sub {
+      color: rgba(255,255,255,0.35);
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-align: center;
+      max-width: 400px;
+      line-height: 1.6;
+    }
+
+    .spinner {
+      width: 36px; height: 36px;
+      border: 2px solid rgba(0,255,255,0.15);
+      border-top-color: rgba(0,255,255,0.85);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -83,26 +126,47 @@
 </div>
 <div id="hint">Bring both hands into frame to weave the strings</div>
 
-<!-- MediaPipe Hands -->
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<div id="overlay">
+  <div class="spinner" id="spinner"></div>
+  <div id="overlay-msg">Loading MediaPipe…</div>
+  <div id="overlay-sub"></div>
+</div>
+
+<!-- MediaPipe Hands (pinned version) -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/hands.js"
+        crossorigin="anonymous"
+        onerror="scriptFailed('MediaPipe Hands CDN')"></script>
 <!-- p5.js -->
-<script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"
+        crossorigin="anonymous"
+        onerror="scriptFailed('p5.js CDN')"></script>
 
 <script>
-// ─── Constants ───────────────────────────────────────────────────────────────
+// ─── Error helpers ────────────────────────────────────────────────────────────
+function scriptFailed(name) {
+  showOverlay('⚠ Failed to load ' + name, 'Check your internet connection and refresh the page.');
+}
+
+function showOverlay(msg, sub, hideSpinner) {
+  document.getElementById('overlay').classList.remove('hidden');
+  document.getElementById('overlay-msg').textContent = msg;
+  document.getElementById('overlay-sub').textContent = sub || '';
+  if (hideSpinner) document.getElementById('spinner').style.display = 'none';
+}
+
+function hideOverlay() {
+  document.getElementById('overlay').classList.add('hidden');
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 const FINGERTIP_IDS = [4, 8, 12, 16, 20];
-
-// Neon palette per fingertip: [r, g, b]
 const TIP_COLORS = [
-  [0,   255, 255],   // thumb   → cyan
-  [255,  0,  255],   // index   → magenta
-  [255, 255,   0],   // middle  → yellow
-  [0,   255, 128],   // ring    → spring green
-  [255,  80, 200],   // pinky   → hot pink
+  [0,   255, 255],  // thumb  → cyan
+  [255,   0, 255],  // index  → magenta
+  [255, 255,   0],  // middle → yellow
+  [0,   255, 128],  // ring   → spring green
+  [255,  80, 200],  // pinky  → hot pink
 ];
-
-// Hand skeleton connections (MediaPipe landmark indices)
 const CONNECTIONS = [
   [0,1],[1,2],[2,3],[3,4],
   [0,5],[5,6],[6,7],[7,8],
@@ -113,233 +177,201 @@ const CONNECTIONS = [
 ];
 
 // ─── Shared state ─────────────────────────────────────────────────────────────
-let handsData = [];   // up to 2 landmark arrays
-
+let handsData = [];
+const videoEl  = document.getElementById('webcam');
 const statusEl = document.getElementById('status');
 
-function setStatus(text, active = false) {
-  statusEl.textContent = text;
-  statusEl.className = active ? 'active' : '';
+function setStatus(text, cls) {
+  statusEl.textContent  = text;
+  statusEl.className    = cls || '';
 }
 
-// ─── MediaPipe Hands ─────────────────────────────────────────────────────────
-const mpHands = new Hands({
-  locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
-});
+// ─── MediaPipe init (deferred until scripts load) ─────────────────────────────
+function initMediaPipe() {
+  if (typeof Hands === 'undefined') {
+    showOverlay('⚠ MediaPipe did not load', 'Try refreshing. If the error persists, check your internet connection.', true);
+    return;
+  }
 
-mpHands.setOptions({
-  maxNumHands: 2,
-  modelComplexity: 1,
-  minDetectionConfidence: 0.65,
-  minTrackingConfidence: 0.5
-});
-
-mpHands.onResults((results) => {
-  handsData = results.multiHandLandmarks || [];
-
-  if (handsData.length === 0)      setStatus('⬡ Show your hands…', false);
-  else if (handsData.length === 1) setStatus('⬡ One hand detected — bring in the other', false);
-  else                              setStatus('◈ Strings Active', true);
-});
-
-// ─── p5 Sketch ───────────────────────────────────────────────────────────────
-new p5((p) => {
-
-  // ── helpers ──────────────────────────────────────────────────────────────
-
-  // Convert normalized MediaPipe landmark to canvas pixel, mirroring X
-  const toPixel = (lm) => ({
-    x: (1 - lm.x) * p.width,
-    y: lm.y * p.height
+  const mpHands = new Hands({
+    locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1646424915/${f}`
   });
 
-  const glow = (color, blur) => {
-    p.drawingContext.shadowColor = color;
-    p.drawingContext.shadowBlur  = blur;
-  };
-  const noGlow = () => { p.drawingContext.shadowBlur = 0; };
+  mpHands.setOptions({
+    maxNumHands: 2,
+    modelComplexity: 1,
+    minDetectionConfidence: 0.65,
+    minTrackingConfidence: 0.5
+  });
 
-  // Draw a layered glowing dot
-  const glowDot = (x, y, r, g, b, radius = 7) => {
-    const col = `rgb(${r},${g},${b})`;
-    // outer bloom
-    glow(col, 28);
-    p.fill(r, g, b, 140);
-    p.noStroke();
-    p.circle(x, y, radius * 2.4);
-    // core
-    glow(col, 12);
-    p.fill(r, g, b, 230);
-    p.circle(x, y, radius);
-    // specular highlight
-    glow('rgba(255,255,255,0.9)', 6);
-    p.fill(255, 255, 255, 220);
-    p.circle(x, y, radius * 0.35);
-    noGlow();
-  };
+  mpHands.onResults((results) => {
+    handsData = results.multiHandLandmarks || [];
+    if      (handsData.length === 0) setStatus('⬡ Show your hands…');
+    else if (handsData.length === 1) setStatus('⬡ Show both hands…');
+    else                              setStatus('◈ Strings Active', 'active');
+  });
 
-  // Draw hand skeleton + joint dots
-  const drawHand = (landmarks) => {
-    const pts = landmarks.map(toPixel);
+  // ── Camera via getUserMedia (no camera_utils dependency) ───────────────────
+  document.getElementById('overlay-msg').textContent = 'Requesting camera…';
 
-    // Skeleton
-    p.drawingContext.shadowColor = 'rgba(80,200,255,0.5)';
-    p.drawingContext.shadowBlur  = 6;
-    p.strokeWeight(1.2);
-    p.stroke(60, 180, 240, 120);
-    p.noFill();
-    CONNECTIONS.forEach(([a, b]) => {
-      p.line(pts[a].x, pts[a].y, pts[b].x, pts[b].y);
-    });
-    noGlow();
+  navigator.mediaDevices.getUserMedia({
+    video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
+  })
+  .then((stream) => {
+    videoEl.srcObject = stream;
+    return videoEl.play();
+  })
+  .then(() => {
+    document.getElementById('overlay-msg').textContent = 'Loading hand model…';
 
-    // Joints
-    pts.forEach(({ x, y }, i) => {
-      const tipIdx = FINGERTIP_IDS.indexOf(i);
-      if (tipIdx !== -1) {
-        const [r, g, b] = TIP_COLORS[tipIdx];
-        glowDot(x, y, r, g, b, 9);
-      } else {
-        glowDot(x, y, 80, 160, 220, 4.5);
+    // Kick-start the frame loop
+    let modelReady = false;
+    const loop = async () => {
+      if (videoEl.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        await mpHands.send({ image: videoEl });
+        if (!modelReady) {
+          modelReady = true;
+          hideOverlay();
+          setStatus('⬡ Show your hands…');
+        }
       }
-    });
-  };
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+  })
+  .catch((err) => {
+    console.error('Camera / model error:', err);
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      showOverlay(
+        '📷 Camera access denied',
+        'Click the camera icon in your browser\'s address bar, choose "Allow", then refresh the page.',
+        true
+      );
+      setStatus('✗ Camera blocked', 'error');
+    } else if (err.name === 'NotFoundError') {
+      showOverlay('📷 No camera found', 'Connect a webcam and refresh the page.', true);
+      setStatus('✗ No camera', 'error');
+    } else {
+      showOverlay('⚠ Error: ' + err.message, 'Check the browser console for details.', true);
+      setStatus('✗ Error', 'error');
+    }
+  });
 
-  // Draw cat's cradle strings between the two hands
-  const drawStrings = (hand0, hand1) => {
-    const pts0 = hand0.map(toPixel);
-    const pts1 = hand1.map(toPixel);
-    const ctx  = p.drawingContext;
-    const diag = Math.hypot(p.width, p.height);
+  // ── p5 Sketch ───────────────────────────────────────────────────────────────
+  new p5((p) => {
+    const toPixel = (lm) => ({ x: (1 - lm.x) * p.width, y: lm.y * p.height });
 
-    // ── Corresponding fingertip strings ──
-    FINGERTIP_IDS.forEach((tipId, i) => {
-      const a = pts0[tipId];
-      const b = pts1[tipId];
-      const [r, g, b2] = TIP_COLORS[i];
+    const glow   = (col, blur) => { p.drawingContext.shadowColor = col; p.drawingContext.shadowBlur = blur; };
+    const noGlow = ()          => { p.drawingContext.shadowBlur = 0; };
 
-      const dist = Math.hypot(b.x - a.x, b.y - a.y);
-      const t    = Math.min(dist / (diag * 0.55), 1); // 0=close, 1=stretched
+    const glowDot = (x, y, r, g, b, radius) => {
+      const col = `rgb(${r},${g},${b})`;
+      glow(col, 28); p.fill(r, g, b, 140); p.noStroke(); p.circle(x, y, radius * 2.4);
+      glow(col, 12); p.fill(r, g, b, 230);               p.circle(x, y, radius);
+      glow('rgba(255,255,255,0.9)', 6); p.fill(255,255,255,220); p.circle(x, y, radius * 0.35);
+      noGlow();
+    };
 
-      // Thickness: thicker when close (elastic compression)
-      const thick = 1.8 + (1 - t) * 5;
+    const drawHand = (landmarks) => {
+      const pts = landmarks.map(toPixel);
+      p.drawingContext.shadowColor = 'rgba(80,200,255,0.5)';
+      p.drawingContext.shadowBlur  = 6;
+      p.strokeWeight(1.2); p.stroke(60,180,240,120); p.noFill();
+      CONNECTIONS.forEach(([a, b]) => p.line(pts[a].x, pts[a].y, pts[b].x, pts[b].y));
+      noGlow();
+      pts.forEach(({ x, y }, i) => {
+        const ti = FINGERTIP_IDS.indexOf(i);
+        if (ti !== -1) { const [r,g,b] = TIP_COLORS[ti]; glowDot(x, y, r, g, b, 9); }
+        else glowDot(x, y, 80, 160, 220, 4.5);
+      });
+    };
 
-      // Color blends toward white-hot at close range, yellow at far stretch
-      const ri = Math.round(r * (1-t) + 255 * t);
-      const gi = Math.round(g * (1-t) + 220 * t);
-      const bi = Math.round(b2 * (1-t) + 0   * t);
+    const drawStrings = (h0, h1) => {
+      const p0  = h0.map(toPixel);
+      const p1  = h1.map(toPixel);
+      const ctx = p.drawingContext;
+      const dia = Math.hypot(p.width, p.height);
 
-      const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
-      grad.addColorStop(0.0, `rgba(${r},${g},${b2},0.95)`);
-      grad.addColorStop(0.5, `rgba(255,255,255,${0.6 + (1-t)*0.35})`);
-      grad.addColorStop(1.0, `rgba(${ri},${gi},${bi},0.95)`);
+      // Corresponding fingertip strings
+      FINGERTIP_IDS.forEach((tid, i) => {
+        const a = p0[tid], b = p1[tid];
+        const [r, g, bl] = TIP_COLORS[i];
+        const dist  = Math.hypot(b.x - a.x, b.y - a.y);
+        const t     = Math.min(dist / (dia * 0.55), 1);
+        const thick = 1.8 + (1 - t) * 5;
+        const ri    = Math.round(r  * (1-t) + 255 * t);
+        const gi    = Math.round(g  * (1-t) + 220 * t);
+        const bi2   = Math.round(bl * (1-t));
+        const mx = (a.x + b.x) / 2;
+        const my = (a.y + b.y) / 2 + dist * 0.04;
 
-      // Slight catenary droop for organic string feel
-      const mx = (a.x + b.x) / 2;
-      const my = (a.y + b.y) / 2 + dist * 0.04;
+        const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+        grad.addColorStop(0.0, `rgba(${r},${g},${bl},0.95)`);
+        grad.addColorStop(0.5, `rgba(255,255,255,${0.6 + (1-t)*0.35})`);
+        grad.addColorStop(1.0, `rgba(${ri},${gi},${bi2},0.95)`);
 
-      // Three-pass glow: bloom → mid → core
-      const passes = [
-        { blur: 22, widthMult: 3.2, alpha: 0.35 },
-        { blur: 10, widthMult: 1.8, alpha: 0.65 },
-        { blur: 3,  widthMult: 1.0, alpha: 1.00 },
-      ];
-
-      passes.forEach(({ blur, widthMult, alpha }) => {
-        ctx.shadowColor = `rgba(${r},${g},${b2},0.7)`;
-        ctx.shadowBlur  = blur;
-        ctx.strokeStyle = grad;
-        ctx.globalAlpha = alpha;
-        ctx.lineWidth   = thick * widthMult;
-        ctx.lineCap     = 'round';
-        ctx.beginPath();
-        ctx.moveTo(a.x, a.y);
-        ctx.quadraticCurveTo(mx, my, b.x, b.y);
-        ctx.stroke();
+        [
+          { blur:22, wm:3.2, alpha:0.35 },
+          { blur:10, wm:1.8, alpha:0.65 },
+          { blur:3,  wm:1.0, alpha:1.00 },
+        ].forEach(({ blur, wm, alpha }) => {
+          ctx.shadowColor = `rgba(${r},${g},${bl},0.7)`;
+          ctx.shadowBlur  = blur;
+          ctx.strokeStyle = grad;
+          ctx.globalAlpha = alpha;
+          ctx.lineWidth   = thick * wm;
+          ctx.lineCap     = 'round';
+          ctx.beginPath(); ctx.moveTo(a.x, a.y);
+          ctx.quadraticCurveTo(mx, my, b.x, b.y);
+          ctx.stroke();
+        });
+        ctx.globalAlpha = 1; ctx.shadowBlur = 0;
       });
 
-      ctx.globalAlpha = 1;
-      ctx.shadowBlur  = 0;
-    });
+      // Cross cradle strings
+      [
+        [FINGERTIP_IDS[1], FINGERTIP_IDS[4]],
+        [FINGERTIP_IDS[4], FINGERTIP_IDS[1]],
+        [FINGERTIP_IDS[2], FINGERTIP_IDS[2]],
+      ].forEach(([ai, bi]) => {
+        const a = p0[ai], b = p1[bi];
+        const dist = Math.hypot(b.x-a.x, b.y-a.y);
+        const t    = Math.min(dist / (dia * 0.5), 1);
+        ctx.shadowColor = 'rgba(180,0,255,0.5)';
+        ctx.shadowBlur  = 8;
+        ctx.strokeStyle = `rgba(200,60,255,${0.18 + (1-t)*0.28})`;
+        ctx.lineWidth   = 0.8 + (1-t) * 2;
+        ctx.lineCap     = 'round';
+        ctx.globalAlpha = 1;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        ctx.shadowBlur  = 0;
+      });
+    };
 
-    // ── Cross strings for the "cradle" weave ──
-    const crossPairs = [
-      [FINGERTIP_IDS[1], FINGERTIP_IDS[4]], // hand0 index → hand1 pinky
-      [FINGERTIP_IDS[4], FINGERTIP_IDS[1]], // hand0 pinky → hand1 index
-      [FINGERTIP_IDS[2], FINGERTIP_IDS[2]], // hand0 middle → hand1 middle (center cross)
-    ];
+    p.setup = () => {
+      const c = p.createCanvas(window.innerWidth, window.innerHeight);
+      c.elt.style.cssText = 'position:fixed;top:0;left:0;z-index:10;pointer-events:none;';
+      p.colorMode(p.RGB, 255);
+    };
 
-    crossPairs.forEach(([ai, bi]) => {
-      const a = pts0[ai];
-      const b = pts1[bi];
-      const dist = Math.hypot(b.x - a.x, b.y - a.y);
-      const t = Math.min(dist / (diag * 0.5), 1);
-      const alpha = (0.18 + (1-t) * 0.25);
+    p.windowResized = () => p.resizeCanvas(window.innerWidth, window.innerHeight);
 
-      ctx.shadowColor = `rgba(180,0,255,0.5)`;
-      ctx.shadowBlur  = 8;
-      ctx.strokeStyle = `rgba(200,60,255,${alpha})`;
-      ctx.lineWidth   = 0.8 + (1-t) * 2;
-      ctx.lineCap     = 'round';
-      ctx.globalAlpha = 1;
-      ctx.beginPath();
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(b.x, b.y);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-    });
-  };
-
-  // ── p5 lifecycle ─────────────────────────────────────────────────────────
-
-  p.setup = () => {
-    const c = p.createCanvas(window.innerWidth, window.innerHeight);
-    c.elt.style.cssText = 'position:fixed;top:0;left:0;z-index:10;pointer-events:none;';
-    p.colorMode(p.RGB, 255);
-    p.noSmooth();
-  };
-
-  p.windowResized = () => p.resizeCanvas(window.innerWidth, window.innerHeight);
-
-  p.draw = () => {
-    p.clear();
-
-    // Subtle dark vignette overlay
-    p.noStroke();
-    p.fill(0, 5, 18, 55);
-    p.rect(0, 0, p.width, p.height);
-
-    if (handsData.length >= 1) drawHand(handsData[0]);
-    if (handsData.length >= 2) {
-      drawHand(handsData[1]);
-      drawStrings(handsData[0], handsData[1]);
-    }
-
-    // Frame rate watermark (faint)
-    p.fill(255, 255, 255, 22);
-    p.noStroke();
-    p.textSize(10);
-    p.textFont('Courier New');
-    p.text(`${Math.round(p.frameRate())} fps`, p.width - 48, p.height - 12);
-  };
-
-}); // end p5 sketch
-
-// ─── Camera ──────────────────────────────────────────────────────────────────
-const videoEl = document.getElementById('webcam');
-
-const cam = new Camera(videoEl, {
-  onFrame: async () => { await mpHands.send({ image: videoEl }); },
-  width: 1280,
-  height: 720
-});
-
-cam.start()
-  .then(() => setStatus('⬡ Show your hands…'))
-  .catch((err) => {
-    console.error('Camera error:', err);
-    setStatus('✗ Camera access denied — please allow and refresh');
+    p.draw = () => {
+      p.clear();
+      p.noStroke(); p.fill(0, 5, 18, 55); p.rect(0, 0, p.width, p.height);
+      if (handsData.length >= 1) drawHand(handsData[0]);
+      if (handsData.length >= 2) { drawHand(handsData[1]); drawStrings(handsData[0], handsData[1]); }
+      p.fill(255,255,255,18); p.noStroke(); p.textSize(10); p.textFont('Courier New');
+      p.text(Math.round(p.frameRate()) + ' fps', p.width - 46, p.height - 12);
+    };
   });
+}
+
+// Wait for all scripts, then init
+window.addEventListener('load', () => {
+  // Small delay to let CDN scripts settle
+  setTimeout(initMediaPipe, 100);
+});
 </script>
 </body>
 </html>
