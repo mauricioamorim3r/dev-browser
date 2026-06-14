@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cat's Cradle — Hand Animation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #000510;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      font-family: 'Courier New', monospace;
+    }
+
+    #webcam {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+      z-index: 0;
+      opacity: 0.55;
+    }
+
+    /* p5.js canvas gets z-index: 10 via JS */
+
+    #hud {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 20;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 22px;
+      pointer-events: none;
+    }
+
+    #title {
+      font-size: 13px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: rgba(0, 255, 255, 0.6);
+      text-shadow: 0 0 12px #00ffff;
+    }
+
+    #status {
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: rgba(255, 255, 255, 0.5);
+      text-shadow: 0 0 8px rgba(255,255,255,0.3);
+      transition: color 0.4s;
+    }
+
+    #status.active {
+      color: rgba(0, 255, 200, 0.85);
+      text-shadow: 0 0 10px rgba(0,255,200,0.6);
+    }
+
+    #hint {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.2);
+      z-index: 20;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+<video id="webcam" autoplay playsinline muted></video>
+
+<div id="hud">
+  <div id="title">Cat's Cradle</div>
+  <div id="status">⬡ Initializing…</div>
+</div>
+<div id="hint">Bring both hands into frame to weave the strings</div>
+
+<!-- MediaPipe Hands -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<!-- p5.js -->
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
+
+<script>
+// ─── Constants ───────────────────────────────────────────────────────────────
+const FINGERTIP_IDS = [4, 8, 12, 16, 20];
+
+// Neon palette per fingertip: [r, g, b]
+const TIP_COLORS = [
+  [0,   255, 255],   // thumb   → cyan
+  [255,  0,  255],   // index   → magenta
+  [255, 255,   0],   // middle  → yellow
+  [0,   255, 128],   // ring    → spring green
+  [255,  80, 200],   // pinky   → hot pink
+];
+
+// Hand skeleton connections (MediaPipe landmark indices)
+const CONNECTIONS = [
+  [0,1],[1,2],[2,3],[3,4],
+  [0,5],[5,6],[6,7],[7,8],
+  [5,9],[9,10],[10,11],[11,12],
+  [9,13],[13,14],[14,15],[15,16],
+  [13,17],[17,18],[18,19],[19,20],
+  [0,17]
+];
+
+// ─── Shared state ─────────────────────────────────────────────────────────────
+let handsData = [];   // up to 2 landmark arrays
+
+const statusEl = document.getElementById('status');
+
+function setStatus(text, active = false) {
+  statusEl.textContent = text;
+  statusEl.className = active ? 'active' : '';
+}
+
+// ─── MediaPipe Hands ─────────────────────────────────────────────────────────
+const mpHands = new Hands({
+  locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
+});
+
+mpHands.setOptions({
+  maxNumHands: 2,
+  modelComplexity: 1,
+  minDetectionConfidence: 0.65,
+  minTrackingConfidence: 0.5
+});
+
+mpHands.onResults((results) => {
+  handsData = results.multiHandLandmarks || [];
+
+  if (handsData.length === 0)      setStatus('⬡ Show your hands…', false);
+  else if (handsData.length === 1) setStatus('⬡ One hand detected — bring in the other', false);
+  else                              setStatus('◈ Strings Active', true);
+});
+
+// ─── p5 Sketch ───────────────────────────────────────────────────────────────
+new p5((p) => {
+
+  // ── helpers ──────────────────────────────────────────────────────────────
+
+  // Convert normalized MediaPipe landmark to canvas pixel, mirroring X
+  const toPixel = (lm) => ({
+    x: (1 - lm.x) * p.width,
+    y: lm.y * p.height
+  });
+
+  const glow = (color, blur) => {
+    p.drawingContext.shadowColor = color;
+    p.drawingContext.shadowBlur  = blur;
+  };
+  const noGlow = () => { p.drawingContext.shadowBlur = 0; };
+
+  // Draw a layered glowing dot
+  const glowDot = (x, y, r, g, b, radius = 7) => {
+    const col = `rgb(${r},${g},${b})`;
+    // outer bloom
+    glow(col, 28);
+    p.fill(r, g, b, 140);
+    p.noStroke();
+    p.circle(x, y, radius * 2.4);
+    // core
+    glow(col, 12);
+    p.fill(r, g, b, 230);
+    p.circle(x, y, radius);
+    // specular highlight
+    glow('rgba(255,255,255,0.9)', 6);
+    p.fill(255, 255, 255, 220);
+    p.circle(x, y, radius * 0.35);
+    noGlow();
+  };
+
+  // Draw hand skeleton + joint dots
+  const drawHand = (landmarks) => {
+    const pts = landmarks.map(toPixel);
+
+    // Skeleton
+    p.drawingContext.shadowColor = 'rgba(80,200,255,0.5)';
+    p.drawingContext.shadowBlur  = 6;
+    p.strokeWeight(1.2);
+    p.stroke(60, 180, 240, 120);
+    p.noFill();
+    CONNECTIONS.forEach(([a, b]) => {
+      p.line(pts[a].x, pts[a].y, pts[b].x, pts[b].y);
+    });
+    noGlow();
+
+    // Joints
+    pts.forEach(({ x, y }, i) => {
+      const tipIdx = FINGERTIP_IDS.indexOf(i);
+      if (tipIdx !== -1) {
+        const [r, g, b] = TIP_COLORS[tipIdx];
+        glowDot(x, y, r, g, b, 9);
+      } else {
+        glowDot(x, y, 80, 160, 220, 4.5);
+      }
+    });
+  };
+
+  // Draw cat's cradle strings between the two hands
+  const drawStrings = (hand0, hand1) => {
+    const pts0 = hand0.map(toPixel);
+    const pts1 = hand1.map(toPixel);
+    const ctx  = p.drawingContext;
+    const diag = Math.hypot(p.width, p.height);
+
+    // ── Corresponding fingertip strings ──
+    FINGERTIP_IDS.forEach((tipId, i) => {
+      const a = pts0[tipId];
+      const b = pts1[tipId];
+      const [r, g, b2] = TIP_COLORS[i];
+
+      const dist = Math.hypot(b.x - a.x, b.y - a.y);
+      const t    = Math.min(dist / (diag * 0.55), 1); // 0=close, 1=stretched
+
+      // Thickness: thicker when close (elastic compression)
+      const thick = 1.8 + (1 - t) * 5;
+
+      // Color blends toward white-hot at close range, yellow at far stretch
+      const ri = Math.round(r * (1-t) + 255 * t);
+      const gi = Math.round(g * (1-t) + 220 * t);
+      const bi = Math.round(b2 * (1-t) + 0   * t);
+
+      const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+      grad.addColorStop(0.0, `rgba(${r},${g},${b2},0.95)`);
+      grad.addColorStop(0.5, `rgba(255,255,255,${0.6 + (1-t)*0.35})`);
+      grad.addColorStop(1.0, `rgba(${ri},${gi},${bi},0.95)`);
+
+      // Slight catenary droop for organic string feel
+      const mx = (a.x + b.x) / 2;
+      const my = (a.y + b.y) / 2 + dist * 0.04;
+
+      // Three-pass glow: bloom → mid → core
+      const passes = [
+        { blur: 22, widthMult: 3.2, alpha: 0.35 },
+        { blur: 10, widthMult: 1.8, alpha: 0.65 },
+        { blur: 3,  widthMult: 1.0, alpha: 1.00 },
+      ];
+
+      passes.forEach(({ blur, widthMult, alpha }) => {
+        ctx.shadowColor = `rgba(${r},${g},${b2},0.7)`;
+        ctx.shadowBlur  = blur;
+        ctx.strokeStyle = grad;
+        ctx.globalAlpha = alpha;
+        ctx.lineWidth   = thick * widthMult;
+        ctx.lineCap     = 'round';
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.quadraticCurveTo(mx, my, b.x, b.y);
+        ctx.stroke();
+      });
+
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur  = 0;
+    });
+
+    // ── Cross strings for the "cradle" weave ──
+    const crossPairs = [
+      [FINGERTIP_IDS[1], FINGERTIP_IDS[4]], // hand0 index → hand1 pinky
+      [FINGERTIP_IDS[4], FINGERTIP_IDS[1]], // hand0 pinky → hand1 index
+      [FINGERTIP_IDS[2], FINGERTIP_IDS[2]], // hand0 middle → hand1 middle (center cross)
+    ];
+
+    crossPairs.forEach(([ai, bi]) => {
+      const a = pts0[ai];
+      const b = pts1[bi];
+      const dist = Math.hypot(b.x - a.x, b.y - a.y);
+      const t = Math.min(dist / (diag * 0.5), 1);
+      const alpha = (0.18 + (1-t) * 0.25);
+
+      ctx.shadowColor = `rgba(180,0,255,0.5)`;
+      ctx.shadowBlur  = 8;
+      ctx.strokeStyle = `rgba(200,60,255,${alpha})`;
+      ctx.lineWidth   = 0.8 + (1-t) * 2;
+      ctx.lineCap     = 'round';
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    });
+  };
+
+  // ── p5 lifecycle ─────────────────────────────────────────────────────────
+
+  p.setup = () => {
+    const c = p.createCanvas(window.innerWidth, window.innerHeight);
+    c.elt.style.cssText = 'position:fixed;top:0;left:0;z-index:10;pointer-events:none;';
+    p.colorMode(p.RGB, 255);
+    p.noSmooth();
+  };
+
+  p.windowResized = () => p.resizeCanvas(window.innerWidth, window.innerHeight);
+
+  p.draw = () => {
+    p.clear();
+
+    // Subtle dark vignette overlay
+    p.noStroke();
+    p.fill(0, 5, 18, 55);
+    p.rect(0, 0, p.width, p.height);
+
+    if (handsData.length >= 1) drawHand(handsData[0]);
+    if (handsData.length >= 2) {
+      drawHand(handsData[1]);
+      drawStrings(handsData[0], handsData[1]);
+    }
+
+    // Frame rate watermark (faint)
+    p.fill(255, 255, 255, 22);
+    p.noStroke();
+    p.textSize(10);
+    p.textFont('Courier New');
+    p.text(`${Math.round(p.frameRate())} fps`, p.width - 48, p.height - 12);
+  };
+
+}); // end p5 sketch
+
+// ─── Camera ──────────────────────────────────────────────────────────────────
+const videoEl = document.getElementById('webcam');
+
+const cam = new Camera(videoEl, {
+  onFrame: async () => { await mpHands.send({ image: videoEl }); },
+  width: 1280,
+  height: 720
+});
+
+cam.start()
+  .then(() => setStatus('⬡ Show your hands…'))
+  .catch((err) => {
+    console.error('Camera error:', err);
+    setStatus('✗ Camera access denied — please allow and refresh');
+  });
+</script>
+</body>
+</html>
